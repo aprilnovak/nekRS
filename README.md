@@ -80,6 +80,14 @@ If you run into problems compiling, installing, or running nekRS, please send a 
 ## Reporting Bugs
 nekRS is hosted on GitHub and all bugs are reported and tracked through the [Issues](https://github.com/Nek5000/nekRS/issues) feature on GitHub. If you are having trouble installing the code or getting your model to run properly, you should first send a message to the User's Group [mailing list](https://groups.google.com/forum/#!forum/nekRS).
 
+## Documentation for Developers
+nekRS uses Doxygen to help document the source code. You can generate an HTML-based website where you can peruse the source code to help understand the structure of the code base, in the event that you want to make modifications or access nekRS's API. Follow the instructions [here](https://www.doxygen.nl/manual/install.html) to install Doxygen. Then, to generate the HTML page, all you need to do is to go wherever you have the nekRS repository, and run the `doxygen` command (assuming `doxygen` is in your `PATH`):
+```sh
+cd nekRS
+doxygen doc/doxygen/Doxyfile
+```
+Then, to view the HTML page, open a web browser and point to `doc/doxygen/html/index.html`. For instance, for Chrome, you would click "File", "Open File", and then navigate through your Finder/file system to the `index.html` file.
+
 ## License
 nekRS is released under the BSD 3-clause license (see LICENSE file). 
 All new contributions must be made under the BSD 3-clause license.
