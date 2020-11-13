@@ -47,11 +47,21 @@ SOFTWARE.
 #define HEXAHEDRA 12
 
 extern "C" { // Start C linkage
+
+/**
+ * Structure containing mesh information.
+ */
 typedef struct {
 
   MPI_Comm comm;
-  int rank, size; // MPI rank and size (process count)
-  
+
+  /// Process rank
+  int rank;
+
+  /// Number of processes
+  int size;
+
+  /// Mesh dimension  
   int dim;
   int Nverts, Nfaces, NfaceVertices;
 
@@ -60,7 +70,9 @@ typedef struct {
   dfloat *EY;
   dfloat *EZ;
 
+  /// Number of elements local to this process
   dlong Nelements;
+
   hlong *EToV; // element-to-vertex connectivity
   dlong *EToE; // element-to-element connectivity
   int   *EToF; // element-to-(local)face connectivity
@@ -122,7 +134,13 @@ typedef struct {
   dfloat *ggeo;
 
   // volume node info
-  int N, Np;
+
+  /// Polynomial degree of basis functions
+  int N;
+
+  /// Number of GLL points per element
+  int Np;
+
   dfloat *r, *s, *t;    // coordinates of local nodes
   dfloat *Dr, *Ds, *Dt; // collocation differentiation matrices
   dfloat *Dmatrices;

@@ -21,7 +21,9 @@ typedef struct
   elliptic_t* solver[NSCALAR_MAX];
 
   int NVfields;            // Number of velocity fields
-  int NSfields;            // Number of scalar fields
+
+  /// Number of scalars to solve for, or the number of passive scalars plus temperature
+  int NSfields;
 
   setupAide options;
 

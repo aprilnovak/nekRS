@@ -7,9 +7,17 @@
 #include "cds.h"
 #include "linAlg.hpp"
 
+/**
+ * Structure that holds most of the high-level information regarding
+ * the equation set to be solved, the mesh, and the solution method.
+ */
 typedef struct
 {
-  int dim, elementType;
+  /// Mesh dimension
+  int dim;
+
+  /// Element type
+  int elementType;
 
   mesh_t* mesh;
   mesh_t* meshT;
@@ -28,32 +36,79 @@ typedef struct
 
   dlong ellipticWrkOffset;
 
+  /// Whether the equation set includes flow, i.e. a solution for velocity
   int flow;
 
+  /// Number of scalars to solve for, or the number of passive scalars plus temperature
   int Nscalar;
+
   setupAide options;
   setupAide vOptions, pOptions;
 
+  /// Number of velocity fields solved for, which is equal to the mesh dimension, \ref ins_t.dim
+  int NVfields;
+
+  /**
+   * \brief Total number of flow-related fields to solve for
+   *
+   * This is computed as the number of velocity components, \ref ins_t.NVfields, plus pressure
+   */
+  int NTfields;
+
   // INS SOLVER OCCA VARIABLES
-  int NVfields, NTfields;
   dlong fieldOffset;
   dlong Nlocal, Ntotal;
 
   int Nblock;
 
-  dfloat dt, idt;
+  /// Time step size
+  dfloat dt;
+
+  /// Storage of \f$\frac{1}{\Delta t}\f$ for fast evaluation in kernels,
+  /// where \f$\Delta t\f$ is the time step
+  dfloat idt;
   dfloat time;
   int tstep;
   dfloat g0, ig0;
+
+  /// Time at which to start the simulation
   dfloat startTime;
+
+  /** 
+   * \brief Time at which to end the simulation
+   *
+   * If \ref ins_t.startTime is not zero, this
+   * is adjusted to the sum of the user-specified final time and the start time.
+   * Note also that if the difference between the final time and the start time
+   * is not evenly divisible by the requested time step, that one extra time
+   * step is added such that the simulation end time will be slightly larger than
+   * the specified final time.
+   */
   dfloat finalTime;
 
+  /// Whether the equation set includes conjugate heat transfer
   int cht;
 
+  /// Order of accuracy of the time integrator
   int temporalOrder;
+
   int ExplicitOrder;
-  int NtimeSteps;    // number of time steps
+
+  /**
+   * \brief Total number of time steps in the simulation
+   *
+   * The total number of time steps is evaluated based on the
+   * start time, final time, and time step size. If the difference between the
+   * final time and start time is not evenly divisible by the time step size,
+   * one extra time step is added to ensure simulation up to and including the
+   * final time.
+   */
+  int NtimeSteps;
+
+  /// Number of stages for the time integrator
   int Nstages;
+
+
   int outputStep;
   int isOutputStep;
   int outputForceStep;
@@ -86,6 +141,7 @@ typedef struct
   occa::memory o_wrk0, o_wrk1, o_wrk2, o_wrk3, o_wrk4, o_wrk5, o_wrk6, o_wrk7,
                o_wrk9, o_wrk12, o_wrk15;
 
+  /// Number of subcycling time steps
   int Nsubsteps;
   dfloat* Ue, sdt;
   occa::memory o_Ue;
@@ -93,7 +149,11 @@ typedef struct
   dfloat* div;
   occa::memory o_div;
 
-  dfloat rho, mue;
+  /// Fluid density
+  dfloat rho;
+
+  /// Fluid viscosity
+  dfloat mue;
   occa::memory o_rho, o_mue;
 
   dfloat* usrwrk;
@@ -101,7 +161,13 @@ typedef struct
 
   occa::memory o_idH; // i.e. inverse of 1D Gll Spacing for quad and Hex
 
-  int readRestartFile,writeRestartFile, restartedFromFile;
+  /// Whether to read from a restart file
+  int readRestartFile;
+
+  /// Whether to write a restart file
+  int writeRestartFile;
+
+  int restartedFromFile;
 
   int filterNc; // filter cut modes i.e. below is not touched
   dfloat* filterM, filterS;

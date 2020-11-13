@@ -60,7 +60,7 @@ ins_t* insSetup(MPI_Comm comm, occa::device device, setupAide &options, int buil
   occa::properties kernelInfoP  = kernelInfo;
   occa::properties kernelInfoS  = kernelInfo;
 
-  ins->NVfields = (ins->dim == 3) ? 3:2; // Total Number of Velocity Fields
+  ins->NVfields = ins->dim;
   ins->NTfields = ins->NVfields + 1;   // Total Velocity + Pressure
 
   ins->SNrk = 0;
