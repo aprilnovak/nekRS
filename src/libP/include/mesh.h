@@ -49,10 +49,14 @@ SOFTWARE.
 extern "C" { // Start C linkage
 
 /**
- * Structure containing mesh information.
+ * Structure containing mesh information. The mesh is distributed among
+ * the parallel processes, so *most*, but not all, information stored in
+ * this structure pertains only to a portion of the entire mesh that is owned
+ * by each process.
  */
 typedef struct {
 
+  /// MPI communicator
   MPI_Comm comm;
 
   /// Process rank
@@ -63,27 +67,113 @@ typedef struct {
 
   /// Mesh dimension  
   int dim;
-  int Nverts, Nfaces, NfaceVertices;
 
-  hlong Nnodes;
-  dfloat *EX; // coordinates of vertices for each element
-  dfloat *EY;
-  dfloat *EZ;
+  /**
+   * \brief Number of vertices per element
+   *
+   * Note that the number of vertices are strictly what is required to
+   * represent the geometry of the element - for instance, this will be 8 for
+   * both HEX8 and HEX20 elements.
+   */
+  int Nverts;
+
+  /// Number of faces per element
+  int Nfaces;
+
+  /// Number of vertices to define a face
+  int NfaceVertices;
 
   /// Number of elements local to this process
   dlong Nelements;
 
-  hlong *EToV; // element-to-vertex connectivity
+  /**
+   * \brief Number of unique vertices in the mesh
+   *
+   * This is the number of unique vertices in the mesh, which is lower than
+   * \ref mesh_t.Nverts times \ref mesh_t.Nelements because the interior vertices are
+   * shared by more than one element.
+   */
+   hlong Nnodes;
+
+  /**
+   * \brief Vertex \f$x\f$-coordinates for each element
+   * 
+   * This is indexed first by the process-local element ID, and then by the
+   * local vertex ID.
+   */
+  dfloat *EX;
+
+  /**
+   * \brief Vertex \f$y\f$-coordinates for each element
+   * 
+   * This is indexed first by the process-local element ID, and then by the
+   * local vertex ID.
+   */
+  dfloat *EY;
+
+  /**
+   * \brief Vertex \f$z\f$-coordinates for each element
+   * 
+   * This is indexed first by the process-local element ID, and then by the
+   * local vertex ID.
+   */
+  dfloat *EZ;
+
+  /**
+   * \brief Element-to-vertex connectivity
+   *
+   * This is indexed first by the process-local element ID, and then by the
+   * element-local vertex ID to give the global vertex ID.
+   */
+  hlong *EToV;
+
   dlong *EToE; // element-to-element connectivity
-  int   *EToF; // element-to-(local)face connectivity
+
+  /**
+   * \brief Element-to-face connectivity
+   *
+   * This is indexed first by the process-local element ID, and then by the
+   * element-local face ID to give the local ID of the neighbor's face that is
+   * connected. A value of -1 indicates that this face has no neighbor, i.e.
+   * is it on a boundary on the exterior of the domain.
+   */
+  int   *EToF;
+
   int   *EToP; // element-to-partition/process connectivity
-  int   *EToB; // element-to-boundary condition type
 
-  hlong *elementInfo; //type of element
+  /**
+   * \brief Element face to boundary ID
+   *
+   * This is indexed first by the process-local element ID, and then by the
+   * element-local face ID to give the boundary ID that the face lies on. A
+   * value of -1 indicates that this face is not on a boundary. Note that the
+   * face ordering in this array differs from that in `nekData.boundaryID`
+   * and `nekData.boundaryIDt`. As long as you use these face IDs in
+   * \ref mesh_t.vmapM, the ordering will be self-consistent.
+   */
+  int   *EToB;
 
-  // boundary faces
-  hlong NboundaryFaces; // number of boundary faces
-  hlong *boundaryInfo; // list of boundary faces (type, vertex-1, vertex-2, vertex-3)
+  /// Numeric type of the element (0 = fluid, 1 = solid)
+  hlong *elementInfo;
+
+  /**
+   * \brief Number of elements that are on a boundary
+   *
+   * An MPI all reduce is performed to sum all the faces on each process such
+   * that NboundaryFaces represents the total number of boundary faces for all processes.
+   */
+  hlong NboundaryFaces;
+
+  /**
+   * \brief List of the vertices corresponding to each boundary face
+   *
+   * This is first indexed by the boundary face, giving first the ID of
+   * the boundary face, and then the global vertex IDs
+   * of the \ref mesh_t.NfaceVertices that define each element face. Therefore,
+   * for each boundary face element, the first index corresponds to that boundary
+   * ID (sometimes referred to as a sideset ID).
+   */
+  hlong *boundaryInfo;
 
   // MPI halo exchange info
   dlong  totalHaloPairs;  // number of elements to be sent in halo exchange
@@ -132,8 +222,6 @@ typedef struct {
   // second order volume geometric factors
   dlong Nggeo;
   dfloat *ggeo;
-
-  // volume node info
 
   /// Polynomial degree of basis functions
   int N;
@@ -189,13 +277,31 @@ typedef struct {
   //reference patch inverse (for OAS precon)
   dfloat *invAP;
 
-  // face node info
-  int Nfp;        // number of nodes per face
-  int *faceNodes; // list of element reference interpolation nodes on element faces
+  /// Number of GLL points per element face
+  int Nfp;
+
+  /**
+   * \brief Volume indices of face nodes
+   *
+   * This is indexed first by the local face ID, and then by the face GLL point ID,
+   * to give the volume index of each face GLL point.
+   **/
+  int *faceNodes;
+
   dlong *vmapM;     // list of volume nodes that are face nodes
   dlong *vmapP;     // list of volume nodes that are paired with face nodes
   dlong *mapP;     // list of surface nodes that are paired with -ve surface  nodes
-  int *faceVertices; // list of mesh vertices on each face
+
+  /**
+   * \brief Local mesh vertices for each element face
+   *
+   * For each element face, this provides a list of the element-local vertex numbering
+   * on that face. This is of length \ref mesh_t.Nfaces times \ref mesh_t.NfaceVertices,
+   * with the first index corresponding to the face and the second to the vertex. This
+   * array is the same for every element because each element uses the same convention
+   * for ordering its local vertices.
+   **/
+  int *faceVertices;
 
   dfloat *LIFT; // lift matrix
   dfloat *FMM;  // Face Mass Matrix
@@ -361,7 +467,12 @@ typedef struct {
   dlong *probeElementIds, *probeIds;  
   dfloat *probeI; 
 
-  // occa stuff
+  /**
+   * \brief The OCCA backend device
+   *
+   * This is the physical device connected to the host; with the abstraction
+   * enabled by OCCA, this can be the CPU or a GPU.
+   */
   occa::device device;
 
   occa::stream defaultStream;
@@ -637,24 +748,69 @@ void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa
 void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem);
 #endif
 
+/**
+ * Solve \f$C*B=A\f$, where \f$A\f$, \f$B\f$, and \f$C\f$ are matrices
+ * @param[in] NrowsA number of rows in matrix \f$A\f$
+ * @param[in] NcolsA number of columns in matrix \f$A\f$
+ * @param[in] A      matrix \f$A\f$
+ * @param[in] NrowsB number of rows in matrix \f$B\f$
+ * @param[in] NcolsB number of columns in matrix \f$B\f$
+ * @param[in] B      matrix \f$B\f$
+ * @param[out] C     matrix \f$C\f$
+ **/
 void matrixRightSolve(int NrowsA, int NcolsA, dfloat *A, int NrowsB, int NcolsB, dfloat *B, dfloat *C);
+
 void matrixEig(int N, dfloat *A, dfloat *VR, dfloat *WR, dfloat *WI);
 void matrixTranspose(const int M, const int N,
                      const dfloat  *A, const int LDA,
                            dfloat *AT, const int LDAT);
-
-// 1D mesh basis functions
+/**
+ * Gauss-Legendre-Lobatto quadrature points in 1-D space
+ * @param[in]  _N  polynomial order, to give \f$N+1\f$ quadrature points
+ * @param[out] _r  quadrature points
+ **/
 void Nodes1D(int _N, dfloat *_r);
+
+/**
+ * Uniformly spaced quadrature points in 1-D space
+ * @param[in]  _N  polynomial order, to give \f$N+1\f$ quadrature points
+ * @param[out] _r  quadrature points
+ **/
 void EquispacedNodes1D(int _N, dfloat *_r);
+
+/**
+ * Value of the \f$i\f$-th Legendre polynomial at a point
+ * @param[in] a  point
+ * @param[in] i  order of the Jacobi polynimal (where the first polynomial is \f$i=0\f$
+ * @param[out] P value of the \f$i\f$-th Legendre polynomial at \f$a\f$
+ **/
 void OrthonormalBasis1D(dfloat a, int i, dfloat *P);
+
 void GradOrthonormalBasis1D(dfloat a, int i, dfloat *Pr);
+
+/**
+ * \brief Vandermonde matrix for a Legendre polynomial basis
+ *
+ * The Vandermonde matrix is of size \f$N_p\f$ by \f$N+1\f$, where \f$N_p\f$
+ * is the number of spatial points and \f$N\f$ is the order of the Legendre
+ * polynomials.
+ *
+ * @param[in] _N      order of Legendre polynomials
+ * @param[in] Npoints number of spatial points, equal to the length of \f$r\f$
+ * @param[in] _r      spatial points
+ * @param[out] V      Vandermonde matrix
+ **/
 void Vandermonde1D(int _N, int Npoints, dfloat *_r, dfloat *V);
+
 void GradVandermonde1D(int _N, int Npoints, dfloat *_r, dfloat *Vr);
 void MassMatrix1D(int _Np, dfloat *V, dfloat *_MM);
 void Dmatrix1D(int _N, int NpointsIn, dfloat *_rIn,
                                int NpointsOut, dfloat *_rOut, dfloat *_Dr);
 void DWmatrix1D(int _N, dfloat *_D, dfloat *_DT);
 
+/**
+ * 
+ **/
 void InterpolationMatrix1D(int _N,
                                int NpointsIn, dfloat *rIn,
                                int NpointsOut, dfloat *rOut,
@@ -662,9 +818,32 @@ void InterpolationMatrix1D(int _N,
 void DegreeRaiseMatrix1D(int Nc, int Nf, dfloat *P);
 void CubatureWeakDmatrix1D(int _Nq, int _cubNq,
                                      dfloat *_cubProject, dfloat *_cubD, dfloat *_cubPDT);
+
+/**
+ * Value of the \f$N\f$-th order Jacobi polynomial at a point
+ * @param[in] a     point
+ * @param[in] alpha \f$\alpha\f$ associated with the Jacobi polynomial
+ * @param[in] beta  \f$\beta\f$ associated with the Jacobi polynomial
+ * @param[in] _N    order of the Jacobi polynimal (where the first polynomial is \f$N=0\f$
+ * \return value of the \f$N\f$-th Jacobi polynomial at \f$a\f$
+ **/
 dfloat JacobiP(dfloat a, dfloat alpha, dfloat beta, int _N);
 dfloat GradJacobiP(dfloat a, dfloat alpha, dfloat beta, int _N);
 void JacobiGLL(int _N, dfloat *_x, dfloat *_w = nullptr);
+
+/**
+ * \brief Gaussian quadrature points associated with the Jacobi polynomial
+ *
+ * Legendre, Chebyshev, and Zernike polynomials are all special cases of Jacobi
+ * polynomials with different values of \f$\alpha\f$ and \f$\beta\f$. Legendre
+ * polynomials have \f$\alpha=1\f$ and \f$\beta=1\f$.
+ *
+ * @param[in] alpha \f$\alpha\f$ associated with the Jacobi polynomial
+ * @param[in] beta  \f$\beta\f$ associated with the Jacobi polynomial
+ * @param[in] _N    order of the quadrature rule, to give \f$N+1\f$ points
+ * @param[out] _x   quadrature points
+ * @param[out] _w   quadrature weights
+ **/
 void JacobiGQ(dfloat alpha, dfloat beta, int _N, dfloat *_x, dfloat *_w);
 } // end C Linkage
 #endif

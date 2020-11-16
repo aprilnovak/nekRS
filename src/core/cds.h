@@ -12,15 +12,24 @@
 
 #define NSCALAR_MAX 100
 
+/**
+ * Structure containing most of the information related to the convection-diffusion
+ * passive scalar solve. Most of these fields are directly copied from those in the
+ * \ref ins_t solver.
+ */
 typedef struct
 {
+  /// Mesh dimension
   int dim, elementType;
 
   mesh_t* mesh;
+
   mesh_t* meshV;
+
   elliptic_t* solver[NSCALAR_MAX];
 
-  int NVfields;            // Number of velocity fields
+  /// Number of velocity fields
+  int NVfields;
 
   /// Number of scalars to solve for, or the number of passive scalars plus temperature
   int NSfields;
@@ -54,7 +63,26 @@ typedef struct
   //solver tolerances
   dfloat TOL;
 
-  dfloat* U, * S;
+  /**
+   * \brief Velocity solution for all components
+   *
+   * This is simply a pointer to \ref ins_t.U, which is used to transport the passive scalars.
+   */
+  dfloat* U;
+
+  ///@{
+  /**
+   * \brief Scalar solution fields on the host and device
+   *
+   * These hold the solution for all \ref cds_t.NSfields passive scalars, for each
+   * of the \ref cds_t.Nstages of the time integrator (that is, these arrays hold all
+   * the previous time step information needed for the time integration (but not
+   * necessarily _all_ previous time steps - only what is needed to move forward in time.)
+   */
+  dfloat* S;
+  occa::memory o_S;
+  ///@}
+
   dfloat* rkNS;
   //  dfloat *rhsS;
   dfloat* rkS;
@@ -72,6 +100,12 @@ typedef struct
   occa::memory o_mapB[NSCALAR_MAX];
   occa::memory o_EToB[NSCALAR_MAX];
 
+  /**
+   * \brief Array in user space on the device
+   *
+   * This array is free for the use of the user - no other routines touch
+   * this array.
+   */
   occa::memory* o_usrwrk;
 
   //halo data
@@ -120,7 +154,7 @@ typedef struct
   // occa::kernel constrainKernel;
 
   occa::memory o_U;
-  occa::memory o_S, o_Se;
+  occa::memory o_Se;
 
   // occa::memory o_Vort, o_Div; // Not sure to keep it
   occa::memory o_haloBuffer;

@@ -28,6 +28,12 @@ typedef struct
   elliptic_t* uvwSolver;
   elliptic_t* pSolver;
 
+  /**
+   * \brief Convection-diffusion solver for passive scalars
+   *
+   * If no passive scalars are present in the simulation, this will
+   * not be initialized.
+   */
   cds_t* cds;
 
   oogs_t* gsh;
@@ -55,11 +61,26 @@ typedef struct
    */
   int NTfields;
 
-  // INS SOLVER OCCA VARIABLES
+  /**
+   * \brief Size of a solution field
+   *
+   * Size of a solution field (a velocity component, pressure, or a passive scalar) in terms of
+   * the number of floats required to represent it. This is taken as the maximum size needed
+   * to represent any of the various solution fields in the case that conjugate heat transfer
+   * exists (and you therefore have different meshes for the fluid and solid phases). This
+   * value is adjusted so that it is an even number of "pages", where the page size is
+   * by default assumed to be 4096, but can also be specified with the NEKRS_PAGE_SIZE
+   * environment variable.
+   */
   dlong fieldOffset;
-  dlong Nlocal, Ntotal;
+
+  /// Number of GLL points local to this process
+  dlong Nlocal;
+
+  dlong Ntotal;
 
   int Nblock;
+
 
   /// Time step size
   dfloat dt;
@@ -116,7 +137,33 @@ typedef struct
   int NiterU, NiterV, NiterW, NiterP;
   dfloat presTOL, velTOL;
 
-  dfloat* U, * P;
+  ///@{ 
+  /**
+   * \brief Velocity solution for all components on the host and device
+   *
+   * This holds the velocity solution for all components in the \ref ins_t.dim
+   * space, for each of the \ref ins_t.Nstages of the time integrator (that is,
+   * this array holds all the previous time step information needed for the
+   * time integration (but not necessarily _all_ previous time steps - only what
+   * is needed to move forward in time).
+   */
+  dfloat* U;
+  occa::memory o_U;
+  ///@}
+
+  ///@{
+  /**
+   * \brief Pressure solution on the host and device
+   *
+   * This holds the pressure solution for each of the \ref ins_t.Nstages of the time
+   * integrator (that is, this array holds all the previous time step information
+   * needed for the time integration (but not necessarily _all_ previous time steps -
+   * only what is needed to move forward in time).
+   */
+  dfloat * P;
+  occa::memory o_P;
+  ///@}
+
   dfloat* BF, * FU;
 
   //RK Subcycle Data
@@ -156,8 +203,16 @@ typedef struct
   dfloat mue;
   occa::memory o_rho, o_mue;
 
+  //@{
+  /**
+   * \brief Arrays in user space on the host and device
+   *
+   * These arrays are free for the use of the user - no other routines touch
+   * these arrays.
+   */
   dfloat* usrwrk;
   occa::memory o_usrwrk;
+  //@}
 
   occa::memory o_idH; // i.e. inverse of 1D Gll Spacing for quad and Hex
 
@@ -195,8 +250,6 @@ typedef struct
   occa::kernel subCycleStrongVolumeKernel;
 
   occa::kernel constrainKernel;
-
-  occa::memory o_U, o_P;
 
   occa::memory o_BF;
   occa::memory o_FU;

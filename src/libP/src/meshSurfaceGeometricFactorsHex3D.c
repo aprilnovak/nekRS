@@ -71,11 +71,22 @@ void computeFrame(dfloat nx, dfloat ny, dfloat nz,
   //  printf("nor = %g,%g,%g; tan = %g,%g,%g; bin = %g,%g,%g\n", nx, ny, nz, tanx, tany, tanz, binx, biny, binz);
 }
 
+/**
+ * Interpolate a set of volume data onto surface nodes with a two-dimensional tensor
+ * product of interpolation matrices
+ * @param[in] faceNodes mapping of face GLL points to volume GLL ID
+ * @param[in] I         interpolation matrix
+ * @param[in] x         volumetric data
+ * @param[in] N         size of volumetric data on faces, i.e. \f$N\times N\f$ points are on surface
+ * @param[out] Ix       interpolated data
+ * @param[in] M         size of interpolated data, i.e. the \f$M\times M\f$ points on the surface
+ **/
 void interpolateFaceHex3D(int* faceNodes, dfloat* I, dfloat* x, int N, dfloat* Ix, int M)
 {
   dfloat* Ix0 = (dfloat*) calloc(N * N, sizeof(dfloat));
   dfloat* Ix1 = (dfloat*) calloc(N * M, sizeof(dfloat));
 
+  // grab the values of x that are on a surface and store in Ix0
   for(int j = 0; j < N; ++j)
     for(int i = 0; i < N; ++i)
       Ix0[j * N + i] = x[faceNodes[j * N + i]];
