@@ -208,7 +208,11 @@ typedef struct
    * \brief Arrays in user space on the host and device
    *
    * These arrays are free for the use of the user - no other routines touch
-   * these arrays.
+   * these arrays. Because these arrays are free for whatever purpose the user
+   * desires, the convention is to allocate space for these arrays and write to
+   * them in the user-defined function (.udf) file. To have access to these arrays
+   * for the entire duration of the simulation, you can allocate space for them
+   * in `UDF_Setup` and write to them for each time step in `UDF_ExecuteStep`.
    */
   dfloat* usrwrk;
   occa::memory o_usrwrk;
