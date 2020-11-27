@@ -16,7 +16,16 @@ void setup(MPI_Comm comm, int buildOnly, int sizeTarget,
            std::string backend, std::string deviceID);
 
 void runStep(double time, double dt, int tstep);
+
+/**
+ * \brief Copy the velocity, pressure, and scalar solutions from device to host
+ *
+ * Copy the velocity, pressure, and passive scalar solutions from the device to the
+ * nekRS data structures on the host. Then, because Nek5000 is still used for I/O,
+ * copy the host solutions to the `nekData` structure.
+ **/
 void copyToNek(double time, int tstep);
+
 void udfExecuteStep(double time, int tstep, int isOutputStep);
 void nekOutfld(void);
 void nekUserchk(void);

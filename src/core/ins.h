@@ -129,9 +129,12 @@ typedef struct
   /// Number of stages for the time integrator
   int Nstages;
 
-
+  /// Time step interval on which to output the simulation
   int outputStep;
+
+  /// Whether simulation data is to be written on this time step
   int isOutputStep;
+
   int outputForceStep;
 
   int NiterU, NiterV, NiterW, NiterP;

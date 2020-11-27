@@ -239,7 +239,30 @@ typedef struct {
   dfloat *Str,*Sts, *Stt;
   dfloat *Smatrices;
   int maxNnzPerRow;
-  dfloat *x, *y, *z;    // coordinates of physical nodes
+
+  ///@{
+  /**
+   * \brief \f$x\f$ coordinates of the GLL points on the host and device
+   **/
+  dfloat *x;
+  occa::memory o_x;
+  ///@}
+
+  ///@{
+  /**
+   * \brief \f$y\f$ coordinates of the GLL points on the host and device
+   **/
+  dfloat *y;
+  occa::memory o_y;
+  ///@}
+
+  ///@{
+  /**
+   * \brief \f$z\f$ coordinates of the GLL points on the host and device
+   **/
+  dfloat *z;
+  occa::memory o_z;
+  ///@}
   
   dfloat sphereRadius;  // for Quad3D 
   
@@ -506,7 +529,7 @@ typedef struct {
 
   occa::memory o_rmapP;
 
-  occa::memory o_EToE, o_EToF, o_EToB, o_x, o_y, o_z;
+  occa::memory o_EToE, o_EToF, o_EToB;
 
   occa::memory o_EToFPairs, o_FPairsToE, o_FPairsToF;
 

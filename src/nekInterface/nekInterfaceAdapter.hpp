@@ -111,7 +111,16 @@ int    nek_bcmap(int bid, int ifld);
 
 int buildNekInterface(const char* casename, int nFields, int N, int np);
 void nek_copyFrom(dfloat time, int tstep);
+
+/**
+ * \brief Copy the velocity, pressure, and scalar solutions from device to host
+ *
+ * Copy the velocity, pressure, and passive scalar solutions from the device to the
+ * nekRS data structures on the host. Then, because Nek5000 is still used for I/O,
+ * copy the host solutions to the `nekData` structure.
+ **/
 void nek_ocopyFrom(dfloat time, int tstep);
+
 void nek_copyFrom(dfloat time);
 void nek_copyTo(dfloat &time);
 void nek_ocopyTo(dfloat &time);
