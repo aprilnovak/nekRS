@@ -2,3 +2,5 @@ build/
 *.so
 *.o
 *.tgz
+doc/doxygen/html
+doc/doxygen/latex
