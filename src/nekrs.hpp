@@ -26,6 +26,16 @@ void runStep(double time, double dt, int tstep);
  **/
 void copyToNek(double time, int tstep);
 
+/**
+ * \brief Call the \ref udf.executeStep method and set output step settings
+ *
+ * If the time step is an output step, this routine sets the \ref ins_t.isOutputStep
+ * member to true (otherwise to false). Then, call the \ref udf.executeStep method,
+ * reverting back to no-output settings afterwards.
+ * @param[in] time         simulation time
+ * @param[in] tstep        time step index
+ * @param[in] isOutputStep whether this time step is an output step
+ **/
 void udfExecuteStep(double time, int tstep, int isOutputStep);
 void nekOutfld(void);
 void nekUserchk(void);
