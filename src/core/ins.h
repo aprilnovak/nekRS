@@ -49,7 +49,11 @@ typedef struct
   int Nscalar;
 
   setupAide options;
-  setupAide vOptions, pOptions;
+
+  setupAide vOptions;
+
+  /// User-specified options for the pressure solver
+  setupAide pOptions;
 
   /// Number of velocity fields solved for, which is equal to the mesh dimension, \ref ins_t.dim
   int NVfields;
@@ -137,7 +141,17 @@ typedef struct
 
   int outputForceStep;
 
-  int NiterU, NiterV, NiterW, NiterP;
+  /// Number of iterations performed for most recent \f$x\f$-velocity solve
+  int NiterU;
+
+  /// Number of iterations performed for most recent \f$y\f$-velocity solve
+  int NiterV;
+
+  /// Number of iterations performed for most recent \f$z\f$-velocity solve
+  int NiterW;
+
+  /// Number of iterations performed for most recent pressure solve
+  int NiterP;
   dfloat presTOL, velTOL;
 
   ///@{ 

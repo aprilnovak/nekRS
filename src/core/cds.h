@@ -58,6 +58,8 @@ typedef struct
   int dtAdaptStep;
 
   int compute[NSCALAR_MAX];
+
+  /// Number of iterations taken in most recent scalar solve for each passive scalar
   int Niter[NSCALAR_MAX];
 
   //solver tolerances
